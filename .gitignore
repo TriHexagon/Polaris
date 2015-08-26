@@ -27,6 +27,22 @@
 *.i*86
 *.x86_64
 *.hex
+*.bin
 
 # Debug files
 *.dSYM/
+
+# QtCreator project files
+*.creator
+*.files
+*.includes
+*.config
+
+# Kernel
+kernel/bin
+kernel/doc
+kernel/obj
+kernel/Doxyfile
+
+# OpenOCD
+*.cfg

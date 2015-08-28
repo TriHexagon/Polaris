@@ -8,8 +8,6 @@
 #ifndef MPU_H
 #define MPU_H
 
-#ifndef NOMPU
-
 #include <kernel.h>
 
 #define ERROR_MPU_NOT_SUPPORTED (ERROR_MODULE_DEFINED+1)
@@ -74,8 +72,6 @@ error_t mpu_enableRegion(uint8_t index, MPU_Region* settings);
  * Otherwise it returns ERROR_NONE.
  */
 error_t mpu_disableRegion(uint8_t index);
-
-#endif
 
 #endif // MPU_H
 

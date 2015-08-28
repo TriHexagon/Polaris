@@ -1,13 +1,8 @@
-#ifndef NOMPU
-
-#include <mpu.h>
 #include <device_specs.h>
 
-#ifndef NOFPU
-#include <ARMCM4_FP.h>
-#else
-#include <ARMCM4.h>
-#endif
+#if __MPU_PRESENT && !defined NOMPU
+
+#include <mpu.h>
 
 #define MPU_REGION_COUNT 8
 

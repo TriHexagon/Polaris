@@ -1,23 +1,11 @@
 #include <exception.h>
 #include <interrupt.h>
 
-#ifndef NOMPU
-#include <mpu.h>
 #include <device_specs.h>
-#endif
 
-#ifndef NOFPU
-#include <ARMCM4_FP.h>
-#else
-#include <ARMCM4.h>
+#if __MPU_PRESENT && !defined NOMPU
+#include <mpu.h>
 #endif
-
-//exception handlers
-void excpt_NMI(void);
-void excpt_HardFault(void);
-void excpt_MemManageFault(void);
-void excpt_BusFault(void);
-void excpt_UsageFault(void);
 
 static const char moduleName[] = "excpt";
 
@@ -34,29 +22,20 @@ void excpt_init(void)
 	tmp |= SCB_CCR_UNALIGN_TRP_Msk; //unaligned access cause an usage fault
 	SCB->CCR = tmp;
 
-	/********** install exception handlers **********/
-	//install NMI handler
-	if ( int_install(INT_NMI, 0, 0, &excpt_NMI) != ERROR_NONE )
-		kernel_panic(moduleName, ERROR_EXCPT_HANDLER_INSTALL_FAILED);
+	/********** enable exception interrupts **********/
+	//NMI and HardFault interrupts are always enabled
 
-	//install HardFault handler
-	if ( int_install(INT_HARDFAULT, 0, 0, &excpt_HardFault) != ERROR_NONE )
-		kernel_panic(moduleName, ERROR_EXCPT_HANDLER_INSTALL_FAILED);
+	//enable MemManageFault interrupt
+	int_enable(INT_MMUFAULT, 0);
 
-	//install MemManageFault handler
-	if ( int_install(INT_MMUFAULT, 0, 0, &excpt_MemManageFault) != ERROR_NONE )
-		kernel_panic(moduleName, ERROR_EXCPT_HANDLER_INSTALL_FAILED);
+	//enable BusFault interrupt
+	int_enable(INT_BUSFAULT, 0);
 
-	//install BusFault handler
-	if ( int_install(INT_BUSFAULT, 0, 0, &excpt_BusFault) != ERROR_NONE )
-		kernel_panic(moduleName, ERROR_EXCPT_HANDLER_INSTALL_FAILED);
-
-	//install UsageFault handler
-	if ( int_install(INT_USAGEFAULT, 0, 0, &excpt_UsageFault) != ERROR_NONE )
-		kernel_panic(moduleName, ERROR_EXCPT_HANDLER_INSTALL_FAILED);
+	//enable UsageFault interrupt
+	int_enable(INT_USAGEFAULT, 0);
 
 	/********** configurate MPU for kernel stack overflow detection **********/
-#ifndef NOMPU
+#if __MPU_PRESENT && !defined NOMPU
 	//enable region 0, settings: baseAddress=kernel stack end, size = 32 bytes, no access
 	MPU_Region region = { device_kernelStackEnd, 5, MPU_ACCESS_NO, MPU_ACCESS_NO, false };
 	mpu_enableRegion(0, &region);
@@ -66,40 +45,31 @@ void excpt_init(void)
 void excpt_deinit(void)
 {
 	/********** deactivate MPU region for kernel stack overflow detection **********/
-#ifndef NOMPU
+#if __MPU_PRESENT && !defined NOMPU
 	mpu_disableRegion(0);
 #endif
 
-	/********** deinstall exception handlers **********/
-	//deinstall NMI handler
-	if ( int_deinstall(INT_NMI, 0) != ERROR_NONE )
-		kernel_panic(moduleName, ERROR_EXCPT_HANDLER_DEINSTALL_FAILED);
+	/********** disable exception interrupts **********/
+	//NMI and HardFault interrupts are always enabled
 
-	//deinstall HardFault handler
-	if ( int_deinstall(INT_HARDFAULT, 0) != ERROR_NONE )
-		kernel_panic(moduleName, ERROR_EXCPT_HANDLER_DEINSTALL_FAILED);
+	//disable MemManageFault interrupt
+	int_disable(INT_MMUFAULT);
 
-	//deinstall MMU handler
-	if ( int_deinstall(INT_MMUFAULT, 0) != ERROR_NONE )
-		kernel_panic(moduleName, ERROR_EXCPT_HANDLER_DEINSTALL_FAILED);
+	//disable BusFault interrupt
+	int_disable(INT_BUSFAULT);
 
-	//deinstall BusFault handler
-	if ( int_deinstall(INT_BUSFAULT, 0) != ERROR_NONE )
-		kernel_panic(moduleName, ERROR_EXCPT_HANDLER_DEINSTALL_FAILED);
-
-	//deinstall UsageFault handler
-	if ( int_deinstall(INT_USAGEFAULT, 0) != ERROR_NONE )
-		kernel_panic(moduleName, ERROR_EXCPT_HANDLER_DEINSTALL_FAILED);
+	//disable UsageFault interrupt
+	int_disable(INT_USAGEFAULT);
 }
 
-/********** fault handlers begin **********/
-void excpt_NMI(void)
+/********** fault handlers begin (weak linkage) **********/
+void handler_nmi(void)
 {
 	debug_printf("NMI exception\n");
 	kernel_panic(moduleName, ERROR_EXCPT_MNI);
 }
 
-void excpt_HardFault(void)
+void handler_hardfault(void)
 {
 	//TODO: make handler safe for possible stack corruption
 	uint32_t HFSR = SCB->HFSR;
@@ -115,7 +85,7 @@ void excpt_HardFault(void)
 	kernel_panic(moduleName, ERROR_EXCPT_HARDFAULT);
 }
 
-void excpt_MemManageFault(void)
+void handler_mmufault(void)
 {
 	uint32_t MMFSR = SCB->CFSR >> SCB_CFSR_MEMFAULTSR_Pos;
 	const char* str;
@@ -147,7 +117,7 @@ void excpt_MemManageFault(void)
 	kernel_panic(moduleName, ERROR_EXCPT_MMUFAULT);
 }
 
-void excpt_BusFault(void)
+void handler_busfault(void)
 {
 	uint32_t BFSR = SCB->CFSR >> SCB_CFSR_BUSFAULTSR_Pos;
 	const char* str;
@@ -171,7 +141,7 @@ void excpt_BusFault(void)
 	kernel_panic(moduleName, ERROR_EXCPT_BUSFAULT);
 }
 
-void excpt_UsageFault(void)
+void handler_usagefault(void)
 {
 	uint32_t UFSR = SCB->CFSR >> SCB_CFSR_USGFAULTSR_Pos;
 	const char* str;

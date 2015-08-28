@@ -1,27 +1,26 @@
 /* Linkerscript for Aurora kernel (ARM Cortex M4) */
 
 /* Handler for startup */
-ENTRY(jmpCode)
+ENTRY(handler_reset)
 
 /* Sections */
 SECTIONS
 {
 	. = 0x20000000;
-
-	.jmpCode :
+	
+	/* interrupt vector table */
+	.ivector :
 	{
 		. = ALIGN(4);
-		*(.jmpCode*)
+		KEEP(*(.ivector))
 		. = ALIGN(4);
 	}
 
-	. = 0x20000004;
-	
-	/* interrupt vector table */
-	.vector_table :
+	/* extended interrupt vector (implemented by drivers) */
+	.ivector_ext :
 	{
 		. = ALIGN(4);
-		KEEP(*(.vector_table))
+		KEEP(*(.ivector_ext))
 		. = ALIGN(4);
 	}
 

@@ -7,11 +7,7 @@
 #include <heap.h>
 #include <drivers/drivers.h>
 
-#ifndef NOFPU
-#include <ARMCM4_FP.h>
-#else
-#include <ARMCM4.h>
-#endif
+#include <device_specs.h>
 
 /**
  * @brief Kernel start routine.
@@ -45,14 +41,14 @@ void kernel_start(void)
 
 	/********** initialize kernel base modules **********/
 
-#ifndef NOMPU
+#if __MPU_PRESENT && !defined NOMPU
 	mpu_init();
 #endif
 
 	int_init();
 	excpt_init();
 
-#ifndef NOFPU
+#if __FPU_PRESENT && !defined NOFPU
 	fpu_init();
 #endif
 

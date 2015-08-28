@@ -73,7 +73,7 @@ $(OBJS): Makefile
 # Other
 .PHONY: load
 load:
-	../KernelLoader $(BIN_DIR)$(PROJ_NAME).bin
+	../../KernelLoader $(BIN_DIR)$(PROJ_NAME).bin
 
 .PHONY: debug
 debug:

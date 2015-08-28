@@ -7,6 +7,9 @@
 #error "Wrong device"
 #endif
 
+#define STM32F40_41xxx
+#include <stm32f4xx.h>
+
 /********* Interrupts *********/
 /**
  * @brief Number of interrupts.

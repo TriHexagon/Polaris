@@ -4,18 +4,13 @@
  */
 
 #include <interrupt.h>
-#include <device_specs.h>
 
-#ifndef NOFPU
-#include <ARMCM4_FP.h>
-#else
-#include <ARMCM4.h>
-#endif
+#include <device_specs.h>
 
 /**
  * @brief Stack start address from linker script.
  */
-extern const void* _stackStart;
+extern uint32_t _stackStart;
 
 const static char moduleName[] = "int";
 
@@ -24,17 +19,58 @@ const static char moduleName[] = "int";
  */
 #define TBLBASE (1<<29)
 
+/* Deklaration of basic interrupt handlers */
+void handler_default(void);
+void handler_reset(void);
+void __attribute__((weak)) handler_nmi(void);
+void __attribute__((weak)) handler_hardfault(void);
+void __attribute__((weak)) handler_mmufault(void);
+void __attribute__((weak)) handler_busfault(void);
+void __attribute__((weak)) handler_usagefault(void);
+void __attribute__((weak)) handler_svcall(void);
+void __attribute__((weak)) handler_pendsv(void);
+void __attribute__((weak)) handler_systick(void);
+
 /**
  * @brief Saves the old interrupt vector table address which will be reloaded at kernel shutdown.
  */
 static uint32_t oldVectorAddress = 0;
 
+typedef void (*IntHandler)(void);
+
 /**
  * @brief The interrupt vector table.
  */
-IntHandler vecTable[DEVICE_INT_COUNT] __attribute__ ((section (".vector_table")));
+__attribute__ ((section (".ivector"))) const IntHandler ivectorTable[16] =
+{
+	(void*)&_stackStart,	//stack start pointer
+	handler_reset,			//Reset handler
+	handler_nmi,			//NMI handler
+	handler_hardfault,		//HardFault handler
+	handler_mmufault,		//MMU handler
+	handler_busfault,		//BusFault handler
+	handler_usagefault,		//UsageFault handler
+	0,						//reserved
+	0,						//reserved
+	0,						//reserved
+	0,						//reserved
+	handler_svcall,			//SVCall handler
+	handler_default,		//DebugMonitor handler
+	0,						//reserved
+	handler_pendsv,			//PendSV handler
+	handler_systick			//SysTick handler
+};
 
-void int_defaultHandler(void)
+#pragma weak handler_nmi = handler_default
+#pragma weak handler_hardfault = handler_default
+#pragma weak handler_mmufault = handler_default
+#pragma weak handler_busfault = handler_default
+#pragma weak handler_usagefault = handler_default
+#pragma weak handler_svcall = handler_default
+#pragma weak handler_pendsv = handler_default
+#pragma weak handler_systick = handler_default
+
+void handler_default(void)
 {
 	kernel_panic(moduleName, ERROR_INT_NO_HANDLER);
 }
@@ -68,12 +104,8 @@ void int_init(void)
 	/********** save old interrupt vector table address **********/
 	oldVectorAddress = SCB->VTOR;
 
-	/********** initialize int_table with default handler **********/
-	for (size_t i = 0; i < DEVICE_INT_COUNT; i++)
-		vecTable[i] = &int_defaultHandler;
-
 	/********** sets new interrupt vector table (set TBLBASE bit because interrupt vector table is in SRAM) **********/
-	SCB->VTOR = ( ( (uint32_t)&vecTable -4) | TBLBASE ) & SCB_VTOR_TBLOFF_Msk;
+	SCB->VTOR = ( ( (uint32_t)ivectorTable) | TBLBASE ) & SCB_VTOR_TBLOFF_Msk;
 
 	/********** enable interrupts **********/
 	__enable_irq();
@@ -86,136 +118,84 @@ void int_deinit(void)
 	SCB->VTOR = oldVectorAddress;
 }
 
-error_t int_install(INT_TYPE type, uint8_t irqNum, uint8_t priority, IntHandler handler)
+void int_enable(int32_t irqNum, uint8_t priority)
 {
-	//arm cortex specific interrupts
-	if (type == INT_RESET || type == INT_NMI || type == INT_HARDFAULT ||
-		type == INT_MMUFAULT || type == INT_BUSFAULT || type == INT_USAGEFAULT ||
-		type == INT_SVCALL || type == INT_PENDSV || type == INT_SYSTICK)
+	//set correct priority value
+	priority = (priority<<(8 - __NVIC_PRIO_BITS));
+
+	//basic fault handler interrupts
+	if ( irqNum < 0 )
 	{
-		//ignore irqNum
-
-		//check priority
-		if (priority > INT_PRIORITY_LOWEST)
-			return ERROR_INVALID_ARGUMENT;
-
-		//check if entry in table is already in use
-		if (vecTable[type-1] != &int_defaultHandler)
-			return ERROR_INT_ALREADY_IN_USE;
-
-		//set handler
-		vecTable[type-1] = handler;
-
-		//set priority (for arm cortex specific interrupts the priority is 0)
 		//priority for reset, nmi and harfault interrupt is fixed
 		//enable interrupt if it can be disabled
-		if (type != INT_RESET && type != INT_NMI && type != INT_HARDFAULT)
+		uint32_t tmp = SCB->SHCSR;
+		switch (irqNum)
 		{
-			NVIC_SetPriority(INT_EXCPT_IRQ_NUM(type), priority);
-			uint32_t tmp = SCB->SHCSR;
-			switch (type)
-			{
-				case INT_USAGEFAULT:
-					tmp |= SCB_SHCSR_USGFAULTENA_Msk;
-					break;
-				case INT_BUSFAULT:
-					tmp |= SCB_SHCSR_BUSFAULTENA_Msk;
-					break;
-				case INT_MMUFAULT:
-					tmp |= SCB_SHCSR_MEMFAULTENA_Msk;
-					break;
-			}
+		case INT_MMUFAULT:
+			tmp |= SCB_SHCSR_MEMFAULTENA_Msk;
+			SCB->SHP[4] = priority;
+			break;
 
-			SCB->SHCSR = tmp;
+		case INT_BUSFAULT:
+			tmp |= SCB_SHCSR_BUSFAULTENA_Msk;
+			SCB->SHP[5] = priority;
+			break;
+
+		case INT_USAGEFAULT:
+			tmp |= SCB_SHCSR_USGFAULTENA_Msk;
+			SCB->SHP[6] = priority;
+			break;
+
+		case INT_SVCALL:
+			//interrupt is always enabled
+			SCB->SHP[11] = priority;
+			break;
+
+		case INT_PENDSV:
+			//interrupt is always enabled
+			SCB->SHP[14] = priority;
+			break;
+
+		case INT_SYSTICK:
+			//interrupt is always enabled
+			SCB->SHP[15] = priority;
+			break;
 		}
 
+		SCB->SHCSR = tmp;
 	}
-	//an IRQ interrupt
-	else if (type == INT_IRQ)
+	//IRQ interrupt
+	else if (irqNum <= DEVICE_INT_COUNT)
 	{
-		//check irqNumber
-		if (irqNum < DEVICE_INT_COUNT)
-			return ERROR_INVALID_ARGUMENT;
-
-		//check priority
-		if (priority > INT_PRIORITY_LOWEST)
-			return ERROR_INVALID_ARGUMENT;
-
-		//check if entry in table is already in use
-		if (vecTable[INT_IRQ_EXCPT_NUM(irqNum)-1] != &int_defaultHandler)
-			return ERROR_INT_ALREADY_IN_USE;
-
-		//set handler
-		vecTable[INT_IRQ_EXCPT_NUM(irqNum)-1] = handler;
-
-		//set priority
-		NVIC_SetPriority(irqNum, priority);
-
-		//enable interrupt
+		NVIC->IP[irqNum] = priority;
 		NVIC_EnableIRQ(irqNum);
 	}
-	//unknown type
-	else
-	{
-		return ERROR_INVALID_ARGUMENT;
-	}
-
-	return ERROR_NONE;
 }
 
-error_t int_deinstall(INT_TYPE type, uint8_t irqNum)
+void int_disable(int32_t irqNum)
 {
-	//arm cortex specific interrupts
-	if (type == INT_RESET || type == INT_NMI || type == INT_HARDFAULT ||
-		type == INT_MMUFAULT || type == INT_BUSFAULT || type == INT_USAGEFAULT ||
-		type == INT_SVCALL || type == INT_PENDSV || type == INT_SYSTICK)
+	//IRQ interrupt
+	if ( irqNum >= 0 && irqNum <= DEVICE_INT_COUNT )
 	{
-		//ignore irqNum
-
-		//check if entry in table is in use
-		if (vecTable[type-1] == &int_defaultHandler)
-			return ERROR_INT_NOT_USED_YET;
-
-		//disable interrupt if it can be disabled
-		uint32_t tmp = SCB->SHCSR;
-		switch (type)
-		{
-			case INT_USAGEFAULT:
-				tmp &= ~SCB_SHCSR_USGFAULTENA_Msk;
-				break;
-			case INT_BUSFAULT:
-				tmp &= ~SCB_SHCSR_BUSFAULTENA_Msk;
-				break;
-			case INT_MMUFAULT:
-				tmp &= ~SCB_SHCSR_MEMFAULTENA_Msk;
-				break;
-		}
-		SCB->SHCSR = tmp;
-
-		//reset entry to default handler
-		vecTable[type-1] = &int_defaultHandler;
-	}
-	//an IRQ interrupt
-	else if (type == INT_IRQ)
-	{
-		//check irqNum
-		if (irqNum > DEVICE_INT_COUNT)
-			return ERROR_INVALID_ARGUMENT;
-
-		//check if entry in table is in use
-		if (vecTable[type-1] == &int_defaultHandler)
-			return ERROR_INT_NOT_USED_YET;
-
-		//disable interrupt
 		NVIC_DisableIRQ(irqNum);
-
-		//reset entry to default handler
-		vecTable[INT_IRQ_EXCPT_NUM(irqNum)-1] = &int_defaultHandler;
+		return;
 	}
-	else
+
+	//basic fault handler interrupts (only MMU-, Bus- and Usagefault can be disabled)
+	uint32_t tmp = SCB->SHCSR;
+	switch (irqNum)
 	{
-		return ERROR_INVALID_ARGUMENT;
-	}
+	case INT_MMUFAULT:
+		tmp &= ~SCB_SHCSR_MEMFAULTENA_Msk;
+		break;
 
-	return ERROR_NONE;
+	case INT_BUSFAULT:
+		tmp &= ~SCB_SHCSR_BUSFAULTENA_Msk;
+		break;
+
+	case INT_USAGEFAULT:
+		tmp &= ~SCB_SHCSR_USGFAULTENA_Msk;
+		break;
+	}
+	SCB->SHCSR = tmp;
 }

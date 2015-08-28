@@ -59,22 +59,17 @@
  */
 typedef enum INT_TYPE
 {
-	INT_RESET		= 1,	/**< The reset interrupt. */
-	INT_NMI			= 2,	/**< The NMI interrupt. */
-	INT_HARDFAULT	= 3,	/**< The hard fault interrupt. */
-	INT_MMUFAULT	= 4,	/**< The memory managment fault interrupt. */
-	INT_BUSFAULT	= 5,	/**< The bus fault interrupt. */
-	INT_USAGEFAULT	= 6,	/**< The usage fault interrupt. */
-	INT_SVCALL		= 11,	/**< The svcall interrupt. */
-	INT_PENDSV		= 14,	/**< The pendsv interrupt. */
-	INT_SYSTICK		= 15,	/**< The systick interrupt. */
-	INT_IRQ,				/**< An IRQ interrupt. */
+	INT_RESET		= -15,	/**< The reset interrupt. */
+	INT_NMI			= -14,	/**< The NMI interrupt. */
+	INT_HARDFAULT	= -13,	/**< The hard fault interrupt. */
+	INT_MMUFAULT	= -12,	/**< The memory managment fault interrupt. */
+	INT_BUSFAULT	= -11,	/**< The bus fault interrupt. */
+	INT_USAGEFAULT	= -10,	/**< The usage fault interrupt. */
+	INT_SVCALL		= -5,	/**< The svcall interrupt. */
+	INT_PENDSV		= -2,	/**< The pendsv interrupt. */
+	INT_SYSTICK		= -1,	/**< The systick interrupt. */
+	INT_IRQ			= 0,	/**< An IRQ interrupt. */
 } INT_TYPE;
-
-/**
- * @brief Interrupt handler type.
- */
-typedef void (*IntHandler)(void);
 
 /**
  * @brief Initializes interrupt (int) driver and saves address of old interrupt vector table.
@@ -91,31 +86,17 @@ void int_init(void);
 void int_deinit(void);
 
 /**
- * @brief Sets interrupt handler in vector table.
- * @param type The interrupt type (see INT_TYPE enum).
- * @param irqNum The irq number (0-239) of interrupt in vector table.
- * This parameter is only valid if it is INT_HARDWARE or INT_SOFTWARE.
- * Otherwise it will be ignored.
- * @param priority The priority of the interrupt (see INT_PRIORITY enum).
- * This parameter is only valid if type parameter is INT_SOFTWARE.
- * Otherwise it will be ignored.
- * @param handler The interrupt handler to install.
- * MUST be NOT NULL.
- * @return ERROR_INT_ALREADY_IN_USE if an interrupt handler is already installed.
- * ERROR_INVALID_ARGUMENT if type isn't a member of INT_TYPE, exceptionNum is 0, priority isn't a member of INT_PRIORITY or handler is NULL.
- * Otherwise it returns ERROR_NONE.
+ * @brief Enables an interrupt.
+ * @param The irq number of the interrupt. If the irq number is invalid, this function does nothing.
+ * @param The priority of the interrupt.
  */
-error_t int_install(INT_TYPE type, uint8_t irqNum, uint8_t priority, IntHandler handler);
+void int_enable(int32_t irqNum, uint8_t priority);
 
 /**
- * @brief Remove interrupt handler from vector table and resets it to default handler.
- * @param type The interrupt type (see INT_TYPE enum).
- * @param irqNum The exception number (0-239) of interrupt in vector table.
- * @return ERROR_INT_NOT_USED_YET if there is no interrupt handler to deinstall.
- * ERROR_INVALID_ARGUMENT if type isn't a member of INT_TYPE or exceptionNum is 0.
- * Otherwise it returns ERROR_NONE.
+ * @brief Disables an interrupt.
+ * @param The irq number of the interrupt. If the irq number is invalid, this function does nothing.
  */
-error_t int_deinstall(INT_TYPE type, uint8_t irqNum);
+void int_disable(int32_t irqNum);
 
 #endif // INTERRUPT_H
 

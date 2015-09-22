@@ -5,12 +5,7 @@
 
 #include <interrupt.h>
 
-#include <device_specs.h>
-
-/**
- * @brief Stack start address from linker script.
- */
-extern uint32_t _stackStart;
+#include <device.h>
 
 const static char moduleName[] = "int";
 

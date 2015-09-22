@@ -6,8 +6,7 @@
 #include <fpu.h>
 #include <heap.h>
 #include <drivers/drivers.h>
-
-#include <device_specs.h>
+#include <device.h>
 
 /**
  * @brief Kernel start routine.
@@ -25,7 +24,7 @@ void kernel_start(void)
 	tmp = SCnSCB->ACTLR;
 	tmp &= ~SCnSCB_ACTLR_DISFOLD_Msk; //enable IT folding
 #ifdef DEBUG
-	tmp |= SCnSCB_ACTLR_DISDEFWBUF_Msk; //Any store to memory must complete before next instruction (decreases performance)
+	tmp |= SCnSCB_ACTLR_DISDEFWBUF_Msk; //any store to memory must complete before next instruction (decreases performance)
 #else
 	tmp &= ~SCnSCB_ACTLR_DISDEFWBUF_Msk; //next intruction can be executed while store to memory
 #endif

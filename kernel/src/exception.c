@@ -1,7 +1,6 @@
 #include <exception.h>
 #include <interrupt.h>
-
-#include <device_specs.h>
+#include <device.h>
 
 #if __MPU_PRESENT && !defined NOMPU
 #include <mpu.h>
@@ -37,7 +36,7 @@ void excpt_init(void)
 	/********** configurate MPU for kernel stack overflow detection **********/
 #if __MPU_PRESENT && !defined NOMPU
 	//enable region 0, settings: baseAddress=kernel stack end, size = 32 bytes, no access
-	MPU_Region region = { device_kernelStackEnd, 5, MPU_ACCESS_NO, MPU_ACCESS_NO, false };
+	MPU_Region region = { &_stackEnd, 5, MPU_ACCESS_NO, MPU_ACCESS_NO, false };
 	mpu_enableRegion(0, &region);
 #endif
 }
@@ -91,9 +90,9 @@ void handler_mmufault(void)
 	const char* str;
 
 	//kernel stack overflow detection: check access voilation at the end of kernel stack
-	if ( (MMFSR & (1<<7)) && (SCB->MMFAR >= (uint32_t)device_kernelStackEnd && SCB->MMFAR <= ((uint32_t)device_kernelStackEnd + 32)) ) //MMARVALID
+	if ( (MMFSR & (1<<7)) && (SCB->MMFAR >= (uint32_t)_stackEnd && SCB->MMFAR <= ((uint32_t)&_stackEnd + 32)) ) //MMARVALID
 	{
-		debug_printf("Kernel stack overflow detection: memory access near kernel stack end detected.\nMMFAR=%x, %u bytes before kernel stack end.", SCB->MMFAR, SCB->MMFAR - (uint32_t)device_kernelStackEnd);
+		debug_printf("Kernel stack overflow detection: memory access near kernel stack end detected.\nMMFAR=%x, %u bytes before kernel stack end.", SCB->MMFAR, SCB->MMFAR - (uint32_t)&_stackEnd);
 		kernel_panic(moduleName, ERROR_EXCPT_MMUFAULT);
 	}
 

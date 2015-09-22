@@ -1,5 +1,4 @@
 #include <heap.h>
-#include <device_specs.h>
 
 typedef struct MemoryNode
 {
@@ -13,12 +12,12 @@ static MemoryNode* head;	//head of the free block linked list
 
 void heap_init(void)
 {
-	heapAddress = device_kernelHeapStart;
-	heapSize = device_kernelHeapSize;
-	head = device_kernelHeapStart;
+	heapAddress = (void*)&_heapStart;
+	heapSize = (size_t)(&_heapSize);
+	head = (void*)(&_heapStart);
 
 	//initialize free block linked list
-	head->size = device_kernelHeapSize;
+	head->size = (size_t)(&_heapSize);
 	head->next = NULL;
 }
 
@@ -184,7 +183,6 @@ void heap_free(void* mem)
 	else
 	{
 		//next is NULL, prev could be
-
 		if (prev != NULL)
 		{
 			//next is NULL, prev is not, current block is new tail

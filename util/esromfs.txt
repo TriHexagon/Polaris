@@ -1,0 +1,91 @@
+esromfs - extreme simple rom file system
+----------------------------------------
+
+esromfs is a file system designed for root boot images in rom/ram for direct access (read only, no compression).
+It has a extreme simple structure and low memory overhead.
+There are only three elements, which must be discribed. These are the structure of header, directory and file entry.
+That's all, the placement of the files and directories are implementation defined.
+
+Header
+------
+
+The header begins at offset 0 and describes general information about the file system.
+
++-----------------+---------------------------------------------------+---------------+
+| Offset in bytes |                      Element                      | Size in bytes |
++-----------------+---------------------------------------------------+---------------+
+| 0               | Magic number: 0x322F8F3B (in little endian)       |             4 |
++-----------------+---------------------------------------------------+---------------+
+| 4               | Endianness: 0 = little endian, 1 = big endian     |             1 |
++-----------------+---------------------------------------------------+---------------+
+| 5               | Version: 0 (current version)                      |             1 |
++-----------------+---------------------------------------------------+---------------+
+| 6               | Size: x (size of the whole file system)           |             4 |
++-----------------+---------------------------------------------------+---------------+
+| 10              | Root directory size: x                            |             4 |
++-----------------+---------------------------------------------------+---------------+
+| 14              | Root directory: x (address of the root directory) |             4 |
++-----------------+---------------------------------------------------+---------------+
+| 18              | Name size: x (size in bytes of the fs name)       |             1 |
++-----------------+---------------------------------------------------+---------------+
+| 19              | Name: x (name of the file system)                 |         1-255 |
++-----------------+---------------------------------------------------+---------------+
+
+Directory
+---------
+
+At the beginning of the directory, there is a 32bit value which represents the number of files in the current directory. After that value begins an array of file entries with the length of the 32bit value.
+
++----------------------------------------------------------+
+| Array length (32bit)                                     |
++----------------------------------------------------------+
+| First file entry (if length is greater than 0)           |
++----------------------------------------------------------+
+| Second file entry (if length is greater than 1)          |
++----------------------------------------------------------+
+| ...                                                      |
++----------------------------------------------------------+
+
+File Entry
+----------
+
+The file entry structure hasn't a fixed size because of the variable file name length (but is max 255 bytes great), so the address of the next file entry must be calculated.
+
++-----------------+----------------------------------------------+---------------+
+| Offset in bytes |                Element                       | Size in bytes |
++-----------------+----------------------------------------------+---------------+
+| 0               | File type: 0 = file, 1 = directory, 2 = link |             1 |
++-----------------+----------------------------------------------+---------------+
+| 1               | Size: x                                      |             4 |
++-----------------+----------------------------------------------+---------------+
+| 5               | Address: x                                   |             4 |
++-----------------+----------------------------------------------+---------------+
+| 9               | Attributes: x (describtion is below)         |             1 |
++-----------------+----------------------------------------------+---------------+
+| 10              | Name size: x (size in bytes)                 |             1 |
++-----------------+----------------------------------------------+---------------+
+| 11              | Name: x                                      |         1-255 |
++-----------------+----------------------------------------------+---------------+
+
+Note: link files contains the path to the linked file.
+Attributes field in file entry (if bit is set attribute is active):
+
++-----+------------+
+| Bit |  Attribute |
++-----+------------+
+|  0  | Executable |
++-----+------------+
+|  1  | Reserved   |
++-----+------------+
+|  2  | Reserved   |
++-----+------------+
+|  3  | Reserved   |
++-----+------------+
+|  4  | Reserved   |
++-----+------------+
+|  5  | Reserved   |
++-----+------------+
+|  6  | Reserved   |
++-----+------------+
+|  7  | Reserved   |
++-----+------------+

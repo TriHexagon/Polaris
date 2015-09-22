@@ -43,6 +43,92 @@ typedef enum ERROR
  */
 void kernel_panic(const char* moduleName, error_t errorCode);
 
+//Constants from linker script
+/**
+ * @brief Address of .text section start.
+ */
+extern const size_t _textStart;
+
+/**
+ * @brief Address of .text section end.
+ */
+extern const size_t _textEnd;
+
+/**
+ * @brief Size of .text section.
+ */
+extern const size_t _textSize;
+
+/**
+ * @brief Address of .data section start.
+ */
+extern const size_t _dataStart;
+
+/**
+ * @brief Address of .data section end.
+ */
+extern const size_t _dataEnd;
+
+/**
+ * @brief Size of .data section.
+ */
+extern const size_t _dataSize;
+
+/**
+ * @brief Address of .bss start.
+ */
+extern const size_t _bssStart;
+
+/**
+ * @brief Address of .bss end.
+ */
+extern const size_t _bssEnd;
+
+/**
+ * @brief Size of .bss section.
+ */
+extern const size_t _bssSize;
+
+/**
+ * @brief Address of stack start.
+ */
+extern const size_t _stackStart;
+
+/**
+ * @brief Address of stack end.
+ */
+extern const size_t _stackEnd;
+
+/**
+ * @brief Address of stack end.
+ */
+extern const size_t _stackSize;
+
+/**
+ * @brief Address of heap.
+ */
+extern const size_t _heapStart;
+
+/**
+ * @brief Size of heap.
+ */
+extern const size_t _heapSize;
+
+/**
+ * @brief Address of userspace start.
+ */
+extern const size_t _userspaceStart;
+
+/**
+ * @brief Address of userspace end.
+ */
+extern const size_t _userspaceEnd;
+
+/**
+ * @brief Size of userspace.
+ */
+extern const size_t _userspaceSize;
+
 #include <debug.h>
 
 #endif // KERNEL_H

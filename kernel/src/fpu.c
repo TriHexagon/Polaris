@@ -1,8 +1,7 @@
 #ifndef NOFPU
 
 #include <fpu.h>
-
-#include <ARMCM4_FP.h>
+#include <device.h>
 
 void fpu_init(void)
 {

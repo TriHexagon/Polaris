@@ -1,4 +1,4 @@
-#include <device_specs.h>
+#include <device.h>
 
 #if __MPU_PRESENT && !defined NOMPU
 

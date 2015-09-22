@@ -1,42 +1,47 @@
 PROJ_NAME = kernel
 
-DEVICE = STM32F4Discovery
+DEVICE = stm32f4discovery
 #DEVICE = STM32F429Discovery
 
-#aviable defines: DEBUG, NOFPU, NOMPU
-DEFINES = DEBUG
-LINKERFILE = link.ld
+#aviable defines: DEBUG, RAMMODE, NOFPU, NOMPU
+DEFINES = DEBUG RAMMODE DEVICE=$(DEVICE)
+
+# Linkerfile settings
+ifeq ( $(filter RAMMODE,$(DEFINES)), )
+LINKERFILE = devices/$(DEVICE)/rom.ld
+else
+LINKERFILE = devices/$(DEVICE)/ram.ld
+endif
 
 OBJ_DIR = obj/
 BIN_DIR = bin/
-INC_DIRS = inc cmsis/inc/ drivers/inc
+INC_DIRS = inc cmsis/inc/ devices/$(DEVICE)/inc
 
 SRCS  = $(wildcard src/*.s)
 SRCS += $(wildcard src/*.c)
 SRCS += $(wildcard cmsis/src/*.c)
-
-ifeq ($(DEVICE),STM32F4Discovery)
-	DEFINES += STM32F4DISCOVERY
-	SRCS += $(wildcard drivers/src/stm32f4discovery/*.c)
-	INC_DIRS += drivers/src/stm32f4discovery/
-endif
-ifeq ($(DEVICE),STM32F429Discovery)
-	DEFINES += STM32F429DISCOVERY
-	SRCS += $(wildcard drivers/src/stm32f429discovery/*.c)
-	INC_DIRS += drivers/src/stm32f429discovery/
-endif
+SRCS += $(wildcard devices/$(DEVICE)/src/*.c)
+SRCS += $(wildcard devices/$(DEVICE)/src/*.s)
 
 OBJS = $(addprefix $(OBJ_DIR), $(addsuffix .o, $(basename $(SRCS))))
 
-CFLAGS = -mcpu=cortex-m4 -mlittle-endian -mthumb -g -O0 -std=c99 -nostdlib
-LFLAGS = -Wl,--gc-sections $(CFLAGS)
+CFLAGS = -mcpu=cortex-m4 -mlittle-endian -mthumb -nostdlib -std=c99
+
+# DEBUG settings
+ifeq ( $(filter DEBUG,$(DEFINES)), )
+CFLAGS += -O2
+else
+CFLAGS += -O0 -g
+endif
 
 # FPU settings
 ifeq ( $(filter NOFPU,$(DEFINES)), )
-	CFLAGS += -mfloat-abi=soft
+CFLAGS += -mfloat-abi=soft
 else
-	CFLAGS += -mfpu=fpv4-sp-d16 -mfloat-abi=hard #or softfp?
+CFLAGS += -mfpu=fpv4-sp-d16 -mfloat-abi=hard #or softfp?
 endif
+
+LFLAGS = -Wl,--gc-sections $(CFLAGS)
 
 CC = arm-none-eabi-gcc
 LD = arm-none-eabi-gcc

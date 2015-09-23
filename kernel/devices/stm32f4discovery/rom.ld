@@ -19,7 +19,7 @@ SECTIONS
 		. = ALIGN(4);
 		KEEP(*(.ivector))
 		. = ALIGN(4);
-	} > ram
+	} > rom
 
 	/* extended interrupt vector (implemented by drivers) */
 	.ivector_ext :
@@ -27,7 +27,7 @@ SECTIONS
 		. = ALIGN(4);
 		KEEP(*(.ivector_ext))
 		. = ALIGN(4);
-	} > ram
+	} > rom
 
 	/* Program code and read only data (RAM) */
 	.text :
@@ -41,7 +41,7 @@ SECTIONS
 		. = ALIGN(4);
 		_textEnd = .;
 		_textSize = _textEnd - _textStart;
-	} > ram
+	} > rom
 
 	/* initialized data */
 	.data :
@@ -53,7 +53,8 @@ SECTIONS
 		. = ALIGN(4);
 		_dataEnd = .;
 		_dataSize = _dataEnd - _dataStart;
-	} > ram
+	} > ccm AT > rom
+	_dataSourceStart = LOADADDR(.data);
 
 	/* uninitialized data */
 	.bss :
@@ -66,7 +67,7 @@ SECTIONS
 		. = ALIGN(4);
 		_bssEnd = .;
 		_bssSize = _bssEnd - _bssStart;
-	} > ram
+	} > ccm
 
 	/* kernel stack */
 	.stack :
@@ -93,6 +94,7 @@ SECTIONS
 	/* userspace */
 	.userspace :
 	{
+		. = ORIGIN(ram);
 		_userspaceStart = .;
 		. = ORIGIN(ram) + LENGTH(ram);
 		_userspaceEnd = .;

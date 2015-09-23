@@ -43,7 +43,48 @@ typedef enum ERROR
  */
 void kernel_panic(const char* moduleName, error_t errorCode);
 
-//Constants from linker script
+#include <debug.h>
+
+/********** Device specific routines **********/
+/**
+ * @brief Device initialization routine (implemented by driver).
+ * Will be called before initialization of basic kernel modules in kernel_start().
+ * @return Returns an error code if an error occured while initialization.
+ * Otherwise ERROR_NONE.
+ */
+error_t device_init(void);
+
+/**
+ * @brief Device driver initialization routine (implemented by driver).
+ * Will be called after kernel basic initialization was succesfull in kernel_start().
+ * @return Return an error code if a fatal error occured while driver initialization.
+ * Otherwise ERROR_NONE.
+ */
+error_t device_initDrivers(void);
+
+/********** Memory map ***********/
+/**
+ * @brief Discribes a memory section (RAM).
+ */
+typedef struct Device_MemorySection
+{
+	void* start;		/**< Start address of memory section */
+	void* end;			/**< End address of memory section (start+size) */
+	size_t size;		/**< Size of memory address */
+	bool isInternal;	/**< Is memory internal (true) or external (false) */
+} Device_MemorySection;
+
+/**
+ * @brief Array of the device specific memory sections (only RAMs).
+ */
+extern const Device_MemorySection device_memoryMap[];
+
+/**
+ * @brief Number of entries in device_memoryMap[].
+ */
+extern const size_t device_memoryMapEntryCount;
+
+/********** Constants from linker script **********/
 /**
  * @brief Address of .text section start.
  */
@@ -73,6 +114,13 @@ extern const size_t _dataEnd;
  * @brief Size of .data section.
  */
 extern const size_t _dataSize;
+
+#ifndef RAMMODE
+/**
+ * @brief Address of .data section source.
+ */
+ extern const size_t _dataSourceStart;
+#endif
 
 /**
  * @brief Address of .bss start.
@@ -129,7 +177,4 @@ extern const size_t _userspaceEnd;
  */
 extern const size_t _userspaceSize;
 
-#include <debug.h>
-
 #endif // KERNEL_H
-

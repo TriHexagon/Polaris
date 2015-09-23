@@ -1,4 +1,5 @@
 #include <device.h>
+#include <drivers/drivers.h>
 
 #if DEVICE != stm32f4discovery
 #error "Wrong device"
@@ -12,3 +13,21 @@ const Device_MemorySection device_memoryMap[] =
  };
 
 const size_t device_memoryMapEntryCount = 2;
+
+/********** Device initialization routines **********/
+void SystemInit(void); //CMSIS initialization
+
+error_t device_init(void)
+{
+    SystemInit();
+
+    return ERROR_NONE;
+}
+
+error_t device_initDrivers(void)
+{
+    led_init();
+    uart_init();
+
+    return ERROR_NONE;
+}

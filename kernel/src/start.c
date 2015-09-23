@@ -17,6 +17,25 @@ void kernel_start(void)
 	__disable_fault_irq();
 	__disable_irq();
 
+#ifndef RAMMODE
+	/********** copy .data section to ram *********/
+	uint32_t *src = &_dataSourceStart, *dst = &_dataStart;
+	while (dst < &_dataEnd)
+	{
+		*dst = *src;
+		src++;
+		dst++;
+	}
+
+	/********** set .bss section to zero **********/
+	dst = &_bssStart;
+	while (dst < &_bssEnd)
+	{
+		*dst = 0;
+		dst++;
+	}
+#endif
+
 	/********** initialize system control registers (see 4.3 in Cortex-M4 Devices Generic Guide) **********/
 	uint32_t tmp;
 
@@ -39,6 +58,8 @@ void kernel_start(void)
 	SCB->SCR = tmp;
 
 	/********** initialize kernel base modules **********/
+	if (device_init() != ERROR_NONE)
+		for (;;) {}
 
 #if __MPU_PRESENT && !defined NOMPU
 	mpu_init();
@@ -54,11 +75,11 @@ void kernel_start(void)
 	heap_init();
 
 	/********** initialize driver modules **********/
-
-	led_init();
-	uart_init();
+	if (device_initDrivers() != ERROR_NONE)
+		for (;;) {}
 
 	debug_printf("Kernel is ready.\n");
+	led_set(0, LED_ENABLE);
 
 	for (;;) {}
 }

@@ -1,13 +1,12 @@
 PROJ_NAME = kernel
 
 DEVICE = stm32f4discovery
-#DEVICE = STM32F429Discovery
 
 #aviable defines: DEBUG, RAMMODE, NOFPU, NOMPU
 DEFINES = DEBUG RAMMODE DEVICE=$(DEVICE)
 
 # Linkerfile settings
-ifeq ( $(filter RAMMODE,$(DEFINES)), )
+ifeq ($(filter RAMMODE,$(DEFINES)),)
 LINKERFILE = devices/$(DEVICE)/rom.ld
 else
 LINKERFILE = devices/$(DEVICE)/ram.ld
@@ -28,17 +27,17 @@ OBJS = $(addprefix $(OBJ_DIR), $(addsuffix .o, $(basename $(SRCS))))
 CFLAGS = -mcpu=cortex-m4 -mlittle-endian -mthumb -nostdlib -std=c99
 
 # DEBUG settings
-ifeq ( $(filter DEBUG,$(DEFINES)), )
+ifeq ($(filter DEBUG,$(DEFINES)),)
 CFLAGS += -O2
 else
 CFLAGS += -O0 -g
 endif
 
 # FPU settings
-ifeq ( $(filter NOFPU,$(DEFINES)), )
-CFLAGS += -mfloat-abi=soft
-else
+ifeq ($(filter NOFPU,$(DEFINES)),)
 CFLAGS += -mfpu=fpv4-sp-d16 -mfloat-abi=hard #or softfp?
+else
+CFLAGS += -mfloat-abi=soft
 endif
 
 LFLAGS = -Wl,--gc-sections $(CFLAGS)
@@ -80,9 +79,13 @@ $(OBJS): Makefile
 load:
 	../../KernelLoader $(BIN_DIR)$(PROJ_NAME).bin
 
+.PHONY: flash
+flash:
+	st-flash write $(BIN_DIR)$(PROJ_NAME).bin 0x08000000
+
 .PHONY: debug
 debug:
-	openocd -f stm32f4discovery.cfg &
+	st-util &
 	arm-none-eabi-gdb $(BIN)$(PROJ_NAME).elf
 	fg %1
 

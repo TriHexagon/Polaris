@@ -1,4 +1,4 @@
-PROJ_NAME = polaris
+PROJ_NAME = kernel
 
 DEVICE = stm32f4discovery
 

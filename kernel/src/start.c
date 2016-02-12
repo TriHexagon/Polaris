@@ -5,6 +5,7 @@
 #include <mpu.h>
 #include <fpu.h>
 #include <heap.h>
+#include <dev.h>
 #include <drivers/drivers.h>
 #include <device.h>
 
@@ -73,6 +74,9 @@ void kernel_start(void)
 #endif
 
 	heap_init();
+
+	/*********** initialize advanced kernel modules **********/
+	dev_init();
 
 	/********** initialize driver modules **********/
 	if (device_initDrivers() != ERROR_NONE)

@@ -36,10 +36,13 @@ General
 *.dSYM/
 
 # QtCreator project files
-*.creator
+*.creator*
 *.files
 *.includes
 *.config
+
+# Visual Code
+.vscode/
 
 # Kernel
 kernel/bin
